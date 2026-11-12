@@ -2,6 +2,7 @@ let estadoPokedex = {
     digitando: false,
 }
 let numPokemon = '';
+let pokemonAtualId = 0;
 const key1 = document.querySelector('#key-1');
 const key2 = document.querySelector('#key-2');
 const key3 = document.querySelector('#key-3');
@@ -17,6 +18,13 @@ const btnWhiteRight = document.querySelector('#btn-white-right');
 const infoScreen = document.querySelector('#info-screen');
 const mainScreen = document.querySelector('#main-screen');
 const numberDisplay = document.querySelector('#number-display');
+const btnAdicionarDez = document.querySelector ('#btn-up');
+const btnDiminuirDez = document.querySelector ('#btn-down');
+const btnDiminuir= document.querySelector ('#btn-left');
+const btnAdicionar = document.querySelector ('#btn-right');
+const btnRed = document.getElementById('#btn-red');
+const btnBlue = document.getElementById('#btn-blue');
+
 key1.addEventListener('click', () => leituraTeclado('1'));
 key2.addEventListener('click', () => leituraTeclado('2'));
 key3.addEventListener('click', () => leituraTeclado('3'));
@@ -29,6 +37,13 @@ key9.addEventListener('click', () => leituraTeclado('9'));
 key10.addEventListener('click', () => leituraTeclado('0'));
 btnWhiteLeft.addEventListener('click', buscarPokemon);
 btnWhiteRight.addEventListener('click', apagar);
+btnAdicionarDez.addEventListener('click', adicionarDezBotao);
+btnDiminuirDez.addEventListener('click', diminuirDezBotao);
+btnAdicionar.addEventListener('click', adicionarBotao);
+btnDiminuir.addEventListener('click', diminuirBotao);
+btnRed.addEventListener('click', luzVermelha);
+btnBlue.addEventListener('click', luzAzul);
+
 function leituraTeclado(tecla)
 {
     if(!estadoPokedex.digitando)
@@ -60,40 +75,62 @@ async function consultarApi(msg)
     try
     {
         const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${msg}`);
+        
+        if (response.status === 404)
+        {
+            throw new Error('pokemon não encontrado');
+        }
+        if (!response.ok)
+        {
+            throw new Error('api falhou');
+        }
+        
         const data = await response.json();
+
         const urlImage = data.sprites.front_default;
+        pokemonAtualId = data.id;
+        atualizarNum (data.id);
+        exibirDados(data);
         exibirSprite(urlImage);
-        atualizarNumero(data.id);
-        exibirDados (data);
+        indicarGeneroPokemon(data.id);
+        
     }
     catch(erro)
     {
-        alert(erro.msg);  
+        console.error('Erro ao consultar Pokémon:', erro);
+        mainScreen.textContent = erro.message === 'pokemon não encontrado'
+            ? 'Pokémon não encontrado.'
+            : 'Não foi possível carregar o Pokémon. Verifique a conexão e tente novamente.';
+    }
+    finally
+    {
+        numPokemon = '';
+        estadoPokedex.digitando = false;
     }
 }
 function buscarPokemon()
 {
     if(estadoPokedex.digitando) consultarApi(numPokemon);
 }
+
 function exibirSprite(urlImage)
 {
     mainScreen.textContent = '';
     const img = document.createElement('img');
     img.src = urlImage;
-    if (window.innerWidth < 600)
+    if (window.innerWidth < 600) 
     {
-        img.style.width = '75px';
+        img.style.width = '65px';
     }
     else
     {
         img.style.width = '190px';
-        img.style.transform = 'translate(0, -12px)';
+        img.style.transform = 'translate(0, -25px)';
     }
     mainScreen.appendChild(img);
 }
 
-
-function atualizarNumero(id)
+function atualizarNum (id)
 {
     let idString = '' + id;
     while(idString.length < 4) idString = '0' + idString;
@@ -101,34 +138,91 @@ function atualizarNumero(id)
     numberDisplay.textContent = idString;
 }
 
-function exibirDados (data)
+function exibirDados(data)
 {
-    infoScreen.textContent = '';
+    infoScreen.textContent = ' ';
     const nome = document.createElement('p');
     nome.textContent = capitalizar(data.name);
-    nome.style.fontSize = 'bold';
+    nome.style.fontSize = '1.5rem';
+    nome.style.fontWeight = 'bold';
+
     const tipo = document.createElement('p');
-    tipo.textContent = 'Tipo:' + capitalizar(data.types[0].type.name);
+    tipo.textContent = 'Tipo: ' + capitalizar(data.types[0].type.name);
+
     const pesoAltura = document.createElement('p');
-    pesoAltura.textContent = 'Peso: ' + (data.weight / 2.205) + 'kg'; 
-    pesoAltura.textContent += ' | Altura: ' + (data.height / 39.07) + 'm';
-    let peso = 0;
-    let unidadePeso = '';
-    if (pesoKg < 1)
-    {
-        peso = Math.round(pesoKg*1000);
-        unidadePeso = 'g';
-    }
-    else 
-    {
-        peso = Math.round(pesoKg);
-        unidadePeso = 'kg';
-    }
-    infoScreen.append(nome, tipo, pesoAltura);
+    pesoAltura.textContent = 'Peso: ' + (data.weight / 2.205).toFixed(2) + 'kg'; 
+    pesoAltura.textContent += '| Altura: ' + (data.height / 39.07).toFixed(2) + 'm';
+
+    const regiao = document.createElement('p');
+    regiao.textContent = 'Região: ' + capitalizar(obterRegiao(data.id));
+
+    infoScreen.append(nome, tipo, pesoAltura, regiao);
+}
+
+function obterRegiao(id)
+{
+    if (id <= 151) return 'Kanto';
+    if (id <= 251) return 'Johto';
+    if (id <= 386) return 'Hoenn';
+    if (id <= 493) return 'Sinnoh';
+    if (id <= 649) return 'Unova';
+    if (id <= 721) return 'Kalos';
+    if (id <= 809) return 'Alola';
+    if (id <= 905) return 'Galar';
+    if (id <= 1025) return 'Paldea';
+    return 'Desconhecida';
 }
 
 function capitalizar(str)
 {
     const strCapitalizar = str.charAt(0).toUpperCase() + str.slice(1);
     return strCapitalizar;
+}
+function adicionarBotao ()
+{
+    if (pokemonAtualId > 0)
+    {
+        consultarApi(pokemonAtualId + 1);
+    }
+}
+function diminuirBotao ()
+{
+    if (pokemonAtualId > 1)
+    {
+        consultarApi(pokemonAtualId - 1);
+    }
+}
+function adicionarDezBotao ()
+{
+    if (pokemonAtualId > 0)
+    {
+        consultarApi(pokemonAtualId + 10);
+    }
+}
+function diminuirDezBotao ()
+{
+    if (pokemonAtualId > 1)
+    {
+        consultarApi(pokemonAtualId - 10);
+    }
+}
+
+async function indicarGeneroPokemon(id) {
+
+    btnRed.classList.remove('piscando');
+    btnBlue.classList.remove('piscando');
+
+    const resposta = await fetch(
+        `https://pokeapi.co/api/v2/pokemon-species/${id}`
+    );
+
+    const dados = await resposta.json();
+
+    if (dados.gender_rate === 8) {
+        btnRed.classList.add('piscando');
+    }
+
+    if (dados.gender_rate === 0) {
+        btnBlue.classList.add('piscando');
+    }
 }
