@@ -100,7 +100,7 @@ async function consultarApi(msg)
         console.error('Erro ao consultar Pokémon:', erro);
         mainScreen.textContent = erro.message === 'pokemon não encontrado'
             ? 'Pokémon não encontrado.'
-            : 'Não foi possível carregar o Pokémon. Verifique a conexão e tente novamente.';
+            : 'Não foi possível carregar o Pokémon.';
     }
     finally
     {
